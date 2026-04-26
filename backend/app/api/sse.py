@@ -1,5 +1,6 @@
 """SSE (Server-Sent Events) endpoint for real-time event streaming."""
 
+import asyncio
 import logging
 import uuid
 
@@ -17,22 +18,35 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-async def persist_event(event: SSEEvent) -> None:
-    """Persist an SSE event to the event_logs table."""
+async def _persist_event_safe(event: SSEEvent) -> None:
+    """Persist an SSE event to the event_logs table with retry on lock."""
     from app.core.database import async_session_factory
 
-    async with async_session_factory() as session:
-        log = EventLog(
-            project_id=event.project_id,
-            task_id=event.task_id,
-            agent_name=event.agent_name,
-            event_type=event.type,
-            event_level="info",
-            content=event.content,
-            metadata_=event.data,
-        )
-        session.add(log)
-        await session.commit()
+    for attempt in range(3):
+        try:
+            async with async_session_factory() as session:
+                log = EventLog(
+                    project_id=event.project_id,
+                    task_id=event.task_id,
+                    agent_name=event.agent_name,
+                    event_type=event.type,
+                    event_level="info",
+                    content=event.content,
+                    metadata_=event.data,
+                )
+                session.add(log)
+                await session.commit()
+                return
+        except Exception as e:
+            if attempt < 2:
+                await asyncio.sleep(0.5 * (attempt + 1))
+            else:
+                logger.debug(f"Failed to persist event after 3 attempts: {e}")
+
+
+async def persist_event(event: SSEEvent) -> None:
+    """Fire-and-forget event persistence (non-blocking)."""
+    asyncio.create_task(_persist_event_safe(event))
 
 
 @router.get("/stream")

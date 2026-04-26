@@ -45,18 +45,12 @@ class BaseDatabaseAgent(ABC):
         agent_name: str,
         db_session_factory,
     ) -> None:
-        """
-        Args:
-            agent_name: The identifier for this agent (must match agents_config.yaml).
-            db_session_factory: SQLAlchemy async session factory.
-        """
         self.agent_name = agent_name
         self._db_factory = db_session_factory
         self._state_machine = TaskStateMachine()
         self._running = False
         self._poll_interval = settings.agent_poll_interval
 
-        # Load role definition from config
         agent_cfg = _agents_config.get("agents", {}).get(agent_name, {})
         self.role = agent_cfg.get("role", agent_name)
         self.goal = agent_cfg.get("goal", "")
@@ -84,7 +78,6 @@ class BaseDatabaseAgent(ABC):
     async def _poll_and_execute(self) -> None:
         """Poll database for claimed tasks and execute them."""
         async with self._db_factory() as session:
-            # Find the next claimed task assigned to this agent
             result = await session.execute(
                 select(Task)
                 .where(
@@ -110,10 +103,8 @@ class BaseDatabaseAgent(ABC):
         self._state_machine.transition(task.status, "in_progress", task_id)
         task.status = "in_progress"
         task.started_at = datetime.now(timezone.utc)
-        await session.flush()
-
-        # Update agent state
         await self._update_agent_state(session, project_id, task.id, "executing")
+        await session.commit()  # Commit before broadcast to release DB lock
 
         # Broadcast start event
         await event_bus.broadcast(
@@ -136,6 +127,8 @@ class BaseDatabaseAgent(ABC):
 
             # Broadcast thinking event
             await self._update_agent_state(session, project_id, task.id, "thinking")
+            await session.commit()  # Commit before broadcast
+
             await event_bus.broadcast(
                 SSEEvent(
                     type="agent_thinking",
@@ -177,10 +170,8 @@ class BaseDatabaseAgent(ABC):
 
             self._state_machine.transition("in_progress", new_status, task_id)
             task.status = new_status
-            await session.flush()
-
-            # Update agent state
             await self._update_agent_state(session, project_id, None, "idle")
+            await session.commit()  # Commit before broadcast
 
             # Broadcast completion event
             await event_bus.broadcast(
@@ -208,9 +199,8 @@ class BaseDatabaseAgent(ABC):
             )
             task.status = "failed"
             task.error_message = str(e)
-            await session.flush()
-
             await self._update_agent_state(session, project_id, None, "error")
+            await session.commit()  # Commit before broadcast
 
             await event_bus.broadcast(
                 SSEEvent(
@@ -225,20 +215,10 @@ class BaseDatabaseAgent(ABC):
 
     @abstractmethod
     async def execute(self, task: Task, context: str, session: AsyncSession) -> str | dict:
-        """Execute the task. Must be implemented by subclasses.
-
-        Args:
-            task: The task to execute.
-            context: The assembled execution context.
-            session: The database session (for writing subtasks etc.).
-
-        Returns:
-            The task result as a string or structured dict.
-        """
+        """Execute the task. Must be implemented by subclasses."""
         ...
 
     def _get_artifact_type(self) -> str:
-        """Get the default artifact type for this agent."""
         return "text"
 
     async def _update_agent_state(
@@ -269,4 +249,3 @@ class BaseDatabaseAgent(ABC):
         state.status = status
         state.thought_process = thought_process
         state.last_heartbeat = datetime.now(timezone.utc)
-        await session.flush()

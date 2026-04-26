@@ -112,10 +112,10 @@ class TaskEngine:
                 status="claimed",  # Auto-claim for manager
             )
             session.add(task)
-            await session.flush()
+            await session.commit()
             await session.refresh(task)
 
-            # Broadcast event
+            # Broadcast event (after commit to avoid DB lock)
             await event_bus.broadcast(
                 SSEEvent(
                     type="task_created",

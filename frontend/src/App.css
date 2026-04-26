@@ -1432,3 +1432,160 @@ body {
   max-height: 200px;
   overflow-y: auto;
 }
+
+/* ============================================================
+   Confirm Plan Button
+   ============================================================ */
+.btn-confirm-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--accent-green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  animation: confirm-pulse 2s ease-in-out infinite;
+}
+
+.btn-confirm-plan:hover:not(:disabled) {
+  background: #16a34a;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+}
+
+.btn-confirm-plan:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@keyframes confirm-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+}
+
+/* ============================================================
+   Review Action Card (for 'review' status tasks)
+   ============================================================ */
+.review-action-card {
+  margin-top: 12px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.review-action-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-primary);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.review-action-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-comment-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 13px;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition);
+  min-height: 60px;
+}
+
+.review-comment-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.review-comment-input::placeholder {
+  color: var(--text-muted);
+}
+
+.review-comment-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.review-success-msg {
+  padding: 8px 12px;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: var(--radius-md);
+  color: var(--accent-green);
+  font-size: 13px;
+  text-align: center;
+}
+
+.review-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.review-action-buttons .btn {
+  flex: 1;
+  justify-content: center;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-approve-action {
+  background: var(--accent-green);
+  color: #fff;
+}
+
+.btn-approve-action:hover:not(:disabled) {
+  background: #16a34a;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+}
+
+.btn-reject-action {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+.btn-reject-action:hover:not(:disabled) {
+  background: #dc2626;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+}
+
+.btn-modify-action {
+  background: var(--accent-yellow);
+  color: #fff;
+}
+
+.btn-modify-action:hover:not(:disabled) {
+  background: #d97706;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+}
+
+.review-action-buttons .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

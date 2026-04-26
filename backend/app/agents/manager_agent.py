@@ -129,7 +129,7 @@ class ManagerAgent(BaseDatabaseAgent):
                 requires_human_review=subtask_def.get(
                     "requires_human_review", False
                 ),
-                status="claimed",
+                status="pending",  # Wait for user confirmation before agents pick up
             )
             session.add(subtask)
             created_subtasks.append(subtask.title)

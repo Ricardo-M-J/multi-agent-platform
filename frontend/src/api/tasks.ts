@@ -20,6 +20,16 @@ export async function getTasks(projectId: string): Promise<Task[]> {
   return Array.isArray(response.data) ? response.data : [];
 }
 
+/** 确认计划（批量将 pending 任务推进到下一个状态） */
+export async function confirmPlan(
+  projectId: string
+): Promise<{ message: string; count: number }> {
+  const response = await apiClient.post<{ message: string; count: number }>(
+    `/projects/${projectId}/tasks/confirm-plan`
+  );
+  return response.data;
+}
+
 /** 审核任务（通过/拒绝/修改/重试） */
 export async function reviewTask(
   projectId: string,
@@ -30,6 +40,24 @@ export async function reviewTask(
     `/projects/${projectId}/tasks/${taskId}/review`,
     data
   );
+  return response.data;
+}
+
+/** 审核任务（简化签名：action + comment） */
+export async function reviewTaskSimple(
+  projectId: string,
+  taskId: string,
+  action: string,
+  comment: string
+): Promise<{ task_id: string; status: string; action: string }> {
+  const response = await apiClient.post<{
+    task_id: string;
+    status: string;
+    action: string;
+  }>(`/projects/${projectId}/tasks/${taskId}/review`, {
+    action,
+    comment,
+  });
   return response.data;
 }
 

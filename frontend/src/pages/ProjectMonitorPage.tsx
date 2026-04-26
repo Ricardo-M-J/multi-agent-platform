@@ -6,10 +6,11 @@ import {
   Pause,
   RefreshCw,
   FileText,
+  CheckCircle2,
 } from 'lucide-react';
 import { useProject } from '../hooks/useProject';
 import { useProjectStore } from '../store/projectStore';
-import { reviewTask } from '../api/tasks';
+import { reviewTask, confirmPlan, reviewTaskSimple } from '../api/tasks';
 import { getArtifacts } from '../api/artifacts';
 import type { TaskReviewRequest, Artifact } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -37,7 +38,17 @@ export function ProjectMonitorPage() {
   const [artifactsLoading, setArtifactsLoading] = useState(false);
   const [expandedArtifactId, setExpandedArtifactId] = useState<string | null>(null);
 
+  // 确认计划状态
+  const [isConfirmingPlan, setIsConfirmingPlan] = useState(false);
+  // 审核操作状态
+  const [reviewComment, setReviewComment] = useState('');
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewSuccessMsg, setReviewSuccessMsg] = useState<string | null>(null);
+
   const selectedTask = project?.tasks.find((t) => t.id === selectedTaskId) || null;
+
+  // 是否有 pending 状态的子任务
+  const hasPendingTasks = (project?.tasks ?? []).some((t) => t.status === 'pending');
 
   // 加载产出物
   const fetchArtifacts = useCallback(async () => {
@@ -83,6 +94,50 @@ export function ProjectMonitorPage() {
       await fetchProject();
     },
     [fetchProject]
+  );
+
+  // 确认计划
+  const handleConfirmPlan = useCallback(async () => {
+    if (!projectId) return;
+    setIsConfirmingPlan(true);
+    try {
+      const result = await confirmPlan(projectId);
+      // 刷新项目数据
+      await fetchProject();
+      alert(`计划已确认，共 ${result.count} 个任务已更新`);
+    } catch (err) {
+      console.error('确认计划失败:', err);
+      alert('确认计划失败，请重试');
+    } finally {
+      setIsConfirmingPlan(false);
+    }
+  }, [projectId, fetchProject]);
+
+  // 审核操作（通过/退回/修改要求）
+  const handleReviewAction = useCallback(
+    async (action: 'approve' | 'reject' | 'modify') => {
+      if (!projectId || !selectedTask) return;
+      setIsReviewing(true);
+      setReviewSuccessMsg(null);
+      try {
+        await reviewTaskSimple(projectId, selectedTask.id, action, reviewComment);
+        const actionLabels: Record<string, string> = {
+          approve: '通过',
+          reject: '退回',
+          modify: '修改要求',
+        };
+        setReviewSuccessMsg(`任务已${actionLabels[action]}！`);
+        setReviewComment('');
+        // 刷新项目数据
+        await fetchProject();
+      } catch (err) {
+        console.error('审核操作失败:', err);
+        alert('审核操作失败，请重试');
+      } finally {
+        setIsReviewing(false);
+      }
+    },
+    [projectId, selectedTask, reviewComment, fetchProject]
   );
 
   if (isLoading) {
@@ -145,6 +200,17 @@ export function ProjectMonitorPage() {
           >
             <RefreshCw size={14} />
           </button>
+          {hasPendingTasks && (
+            <button
+              className="btn btn-confirm-plan"
+              onClick={handleConfirmPlan}
+              disabled={isConfirmingPlan}
+              title="确认计划"
+            >
+              <CheckCircle2 size={14} />
+              <span>{isConfirmingPlan ? '确认中...' : '确认计划'}</span>
+            </button>
+          )}
           {project.status === 'created' || project.status === 'paused' ? (
             <button className="btn btn-primary" onClick={start}>
               <Play size={14} />
@@ -189,6 +255,47 @@ export function ProjectMonitorPage() {
                 projectId={project.id}
                 onReview={handleReview}
               />
+            )}
+            {selectedTask && selectedTask.status === 'review' && (
+              <div className="review-action-card">
+                <h4 className="review-action-title">任务审核</h4>
+                <div className="review-action-body">
+                  <textarea
+                    className="review-comment-input"
+                    placeholder="请输入审核意见..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={3}
+                    disabled={isReviewing}
+                  />
+                  {reviewSuccessMsg && (
+                    <div className="review-success-msg">{reviewSuccessMsg}</div>
+                  )}
+                  <div className="review-action-buttons">
+                    <button
+                      className="btn btn-approve-action"
+                      onClick={() => handleReviewAction('approve')}
+                      disabled={isReviewing}
+                    >
+                      <span>通过</span>
+                    </button>
+                    <button
+                      className="btn btn-reject-action"
+                      onClick={() => handleReviewAction('reject')}
+                      disabled={isReviewing}
+                    >
+                      <span>退回</span>
+                    </button>
+                    <button
+                      className="btn btn-modify-action"
+                      onClick={() => handleReviewAction('modify')}
+                      disabled={isReviewing}
+                    >
+                      <span>修改要求</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>

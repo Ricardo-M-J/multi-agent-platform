@@ -1,6 +1,6 @@
 """Base class for database-driven agents.
 
-Implements the core polling loop: poll DB → claim task → build context → execute → write result.
+Implements the core polling loop: poll DB -> claim task -> build context -> execute -> write result.
 """
 
 import asyncio
@@ -11,7 +11,6 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any
 
-import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,12 +23,10 @@ from app.memory.context_builder import ContextBuilder
 
 logger = logging.getLogger(__name__)
 
-# Load agent role definitions
+# Agent config file path (used by hot-reloader and API)
 _AGENTS_CONFIG_PATH = (
     __import__("pathlib").Path(__file__).resolve().parent.parent / "config" / "agents_config.yaml"
 )
-with open(_AGENTS_CONFIG_PATH, "r", encoding="utf-8") as f:
-    _agents_config = yaml.safe_load(f)
 
 
 class BaseDatabaseAgent(ABC):
@@ -51,7 +48,12 @@ class BaseDatabaseAgent(ABC):
         self._running = False
         self._poll_interval = settings.agent_poll_interval
 
-        agent_cfg = _agents_config.get("agents", {}).get(agent_name, {})
+        # Hot-reload config
+        from app.config.hot_reload import ConfigHotReloader
+        self._config_reloader = ConfigHotReloader(str(_AGENTS_CONFIG_PATH))
+
+        # Initial role definition (will be refreshed on each execution)
+        agent_cfg = self._config_reloader.get_agent_config(agent_name)
         self.role = agent_cfg.get("role", agent_name)
         self.goal = agent_cfg.get("goal", "")
         self.backstory = agent_cfg.get("backstory", "")
@@ -119,11 +121,25 @@ class BaseDatabaseAgent(ABC):
         )
 
         try:
+            # Refresh role definition from latest config
+            agent_cfg = self._get_current_config()
+            self.role = agent_cfg.get("role", self.agent_name)
+            self.goal = agent_cfg.get("goal", "")
+            self.backstory = agent_cfg.get("backstory", "")
+            self.role_definition = (
+                f"**角色**: {self.role}\n**目标**: {self.goal}\n**背景**: {self.backstory}"
+            )
+
             # Build context from database
             context_builder = ContextBuilder(session, project_id)
             context = await context_builder.build_agent_context(
                 self.agent_name, task, self.role_definition
             )
+
+            # Apply skill modifiers
+            skill_modifiers = self._get_skill_modifiers()
+            if skill_modifiers:
+                context = f"{context}\n\n{skill_modifiers}"
 
             # Broadcast thinking event
             await self._update_agent_state(session, project_id, task.id, "thinking")
@@ -212,6 +228,36 @@ class BaseDatabaseAgent(ABC):
                     data={"error": str(e)},
                 )
             )
+
+    def _get_current_config(self) -> dict:
+        """Get the latest config for this agent (hot-reloaded)."""
+        return self._config_reloader.get_agent_config(self.agent_name)
+
+    def _get_system_prompt(self) -> str:
+        """Get the latest system prompt from config."""
+        return self._get_current_config().get("system_prompt", "")
+
+    def _get_llm_params(self) -> dict:
+        """Get LLM parameters from config."""
+        return self._get_current_config().get("llm_params", {})
+
+    def _get_skill_modifiers(self) -> str:
+        """Get prompt modifiers from behavior-type skills."""
+        config = self._get_current_config()
+        skills = config.get("skills", [])
+        if not skills:
+            return ""
+
+        all_skills = self._config_reloader.get_all_skills()
+        modifiers = []
+        for skill_name in skills:
+            skill_cfg = all_skills.get(skill_name, {})
+            if skill_cfg.get("type") == "behavior":
+                modifier = skill_cfg.get("prompt_modifier", "")
+                if modifier:
+                    modifiers.append(f"## 技能要求: {skill_cfg.get('description', skill_name)}\n{modifier}")
+
+        return "\n\n".join(modifiers)
 
     @abstractmethod
     async def execute(self, task: Task, context: str, session: AsyncSession) -> str | dict:

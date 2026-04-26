@@ -7,10 +7,14 @@ import {
   RefreshCw,
   FileText,
   CheckCircle2,
+  Plus,
+  AlertTriangle,
 } from 'lucide-react';
 import { useProject } from '../hooks/useProject';
 import { useProjectStore } from '../store/projectStore';
 import { reviewTask, confirmPlan, reviewTaskSimple } from '../api/tasks';
+import { getPlan, updatePlanTask, deletePlanTask, addPlanTask, confirmPlan as confirmPlanFromPlans } from '../api/plans';
+import type { PlanTask } from '../api/plans';
 import { getArtifacts } from '../api/artifacts';
 import type { TaskReviewRequest, Artifact } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -18,6 +22,7 @@ import { TaskFlowGraph } from '../components/monitor/TaskFlowGraph';
 import { AgentStatusCard } from '../components/monitor/AgentStatusCard';
 import { TaskDetailPanel } from '../components/monitor/TaskDetailPanel';
 import { ReviewActions } from '../components/monitor/ReviewActions';
+import { TaskEditDialog } from '../components/monitor/TaskEditDialog';
 import { EventLog } from '../components/log/EventLog';
 import { LogFilter } from '../components/log/LogFilter';
 
@@ -45,10 +50,115 @@ export function ProjectMonitorPage() {
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState<string | null>(null);
 
+  // 计划编辑模式状态
+  const [planTasks, setPlanTasks] = useState<PlanTask[]>([]);
+  const [showTaskEdit, setShowTaskEdit] = useState(false);
+  const [editingTask, setEditingTask] = useState<PlanTask | null>(null);
+
   const selectedTask = project?.tasks.find((t) => t.id === selectedTaskId) || null;
 
   // 是否有 pending 状态的子任务
   const hasPendingTasks = (project?.tasks ?? []).some((t) => t.status === 'pending');
+
+  // 当有 pending 任务时加载计划
+  useEffect(() => {
+    if (projectId && hasPendingTasks) {
+      getPlan(projectId)
+        .then(setPlanTasks)
+        .catch((err) => console.error('加载计划失败:', err));
+    } else {
+      setPlanTasks([]);
+    }
+  }, [projectId, hasPendingTasks]);
+
+  // Agent 选项列表（用于任务编辑对话框）
+  const agentOptions = (project?.agents ?? []).map((a) => a.agent_name || a.name || '');
+
+  // 编辑计划任务
+  const handleEditPlanTask = useCallback((task: PlanTask) => {
+    setEditingTask(task);
+    setShowTaskEdit(true);
+  }, []);
+
+  // 保存计划任务编辑
+  const handleSavePlanTask = useCallback(
+    async (taskId: string, data: Partial<PlanTask>) => {
+      if (!projectId) return;
+      try {
+        await updatePlanTask(projectId, taskId, data);
+        setShowTaskEdit(false);
+        setEditingTask(null);
+        // 刷新计划
+        const updated = await getPlan(projectId);
+        setPlanTasks(updated);
+        // 刷新项目
+        await fetchProject();
+      } catch (err) {
+        console.error('更新计划任务失败:', err);
+        alert('更新任务失败，请重试');
+      }
+    },
+    [projectId, fetchProject]
+  );
+
+  // 删除计划任务
+  const handleDeletePlanTask = useCallback(
+    async (taskId: string) => {
+      if (!projectId) return;
+      if (!window.confirm('确定要删除此任务吗？')) return;
+      try {
+        await deletePlanTask(projectId, taskId);
+        const updated = await getPlan(projectId);
+        setPlanTasks(updated);
+        await fetchProject();
+      } catch (err) {
+        console.error('删除计划任务失败:', err);
+        alert('删除任务失败，请重试');
+      }
+    },
+    [projectId, fetchProject]
+  );
+
+  // 添加子任务
+  const handleAddPlanTask = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const result = await addPlanTask(projectId, {
+        title: '新任务',
+        description: null,
+        assigned_agent: null,
+        priority: 5,
+        requires_human_review: false,
+      });
+      const updated = await getPlan(projectId);
+      setPlanTasks(updated);
+      // 打开编辑对话框编辑新任务
+      const newTask = updated.find((t) => t.id === result.task_id);
+      if (newTask) {
+        handleEditPlanTask(newTask);
+      }
+    } catch (err) {
+      console.error('添加任务失败:', err);
+      alert('添加任务失败，请重试');
+    }
+  }, [projectId, handleEditPlanTask]);
+
+  // 确认计划并执行（使用 plans API）
+  const handleConfirmPlanFromEditor = useCallback(async () => {
+    if (!projectId) return;
+    setIsConfirmingPlan(true);
+    try {
+      const result = await confirmPlanFromPlans(projectId);
+      setPlanTasks([]);
+      await fetchProject();
+      alert(`计划已确认，共 ${result.count} 个任务已更新`);
+    } catch (err) {
+      console.error('确认计划失败:', err);
+      alert('确认计划失败，请重试');
+    } finally {
+      setIsConfirmingPlan(false);
+    }
+  }, [projectId, fetchProject]);
 
   // 加载产出物
   const fetchArtifacts = useCallback(async () => {
@@ -227,18 +337,78 @@ export function ProjectMonitorPage() {
 
       {/* 主内容区域 - 网格布局 */}
       <div className="monitor-grid">
-        {/* 左侧 - 任务 DAG */}
+        {/* 左侧 - 任务 DAG / 计划编辑 */}
         <div className="grid-panel panel-dag">
           <div className="panel-header-bar">
-            <h3>任务流程图</h3>
-            <span className="task-count">{project.tasks?.length ?? 0} 个任务</span>
+            <h3>{hasPendingTasks ? '执行计划' : '任务流程图'}</h3>
+            <span className="task-count">{hasPendingTasks ? planTasks.length : project.tasks?.length ?? 0} 个任务</span>
           </div>
           <div className="panel-content">
-            <TaskFlowGraph
-              tasks={project.tasks ?? []}
-              selectedTaskId={selectedTaskId}
-              onSelectTask={setSelectedTaskId}
-            />
+            {hasPendingTasks ? (
+              <div className="plan-editor">
+                {/* 提示条 */}
+                <div className="plan-editor-notice">
+                  <AlertTriangle size={14} />
+                  <span>Manager 已生成执行计划，请审核后确认</span>
+                </div>
+
+                {/* 任务列表 */}
+                <div className="plan-task-list">
+                  {planTasks.length === 0 ? (
+                    <div className="empty-mini">暂无计划任务</div>
+                  ) : (
+                    planTasks.map((task) => (
+                      <div key={task.id} className="plan-task-item">
+                        <div className="plan-task-info">
+                          <span className="plan-task-title">{task.title}</span>
+                          {task.assigned_agent && (
+                            <span className="plan-task-agent">{task.assigned_agent}</span>
+                          )}
+                        </div>
+                        <div className="task-actions">
+                          <button
+                            className="btn-icon"
+                            onClick={() => handleEditPlanTask(task)}
+                            title="编辑"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="btn-icon"
+                            onClick={() => handleDeletePlanTask(task.id)}
+                            title="删除"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* 工具栏 */}
+                <div className="plan-toolbar">
+                  <button className="btn btn-secondary" onClick={handleAddPlanTask}>
+                    <Plus size={14} />
+                    <span>添加子任务</span>
+                  </button>
+                  <button
+                    className="btn btn-confirm-plan"
+                    onClick={handleConfirmPlanFromEditor}
+                    disabled={isConfirmingPlan || planTasks.length === 0}
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>{isConfirmingPlan ? '确认中...' : '确认计划并执行'}</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <TaskFlowGraph
+                tasks={project.tasks ?? []}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={setSelectedTaskId}
+              />
+            )}
           </div>
         </div>
 
@@ -395,6 +565,18 @@ export function ProjectMonitorPage() {
           </div>
         </div>
       </div>
+
+      {/* 任务编辑对话框 */}
+      <TaskEditDialog
+        isOpen={showTaskEdit}
+        task={editingTask}
+        agentOptions={agentOptions}
+        onSave={handleSavePlanTask}
+        onClose={() => {
+          setShowTaskEdit(false);
+          setEditingTask(null);
+        }}
+      />
     </div>
   );
 }

@@ -11,40 +11,6 @@ from app.llm.provider import call_llm
 
 logger = logging.getLogger(__name__)
 
-MANAGER_DECOMPOSE_PROMPT = """你是一个项目经理，需要将用户的高层任务拆分为可执行的子任务。
-
-## 项目目标
-{project_description}
-
-## 用户任务
-{task_description}
-
-## 可用的 Agent 角色
-{available_agents}
-
-## 输出要求
-请以 JSON 格式输出子任务列表，每个子任务包含：
-- title: 子任务标题
-- description: 子任务描述
-- assigned_agent: 分配的 Agent 名称（从上面的可用角色中选择）
-- priority: 优先级（数字越大越优先）
-- depends_on: 依赖的子任务索引（从0开始，无依赖则为空列表）
-- requires_human_review: 是否需要人工审核（布尔值）
-
-请只输出 JSON 数组，不要输出其他内容。示例格式：
-```json
-[
-  {{
-    "title": "子任务标题",
-    "description": "子任务描述",
-    "assigned_agent": "researcher",
-    "priority": 10,
-    "depends_on": [],
-    "requires_human_review": false
-  }}
-]
-```"""
-
 
 class ManagerAgent(BaseDatabaseAgent):
     """Manager Agent that decomposes high-level tasks into subtasks.
@@ -61,30 +27,34 @@ class ManagerAgent(BaseDatabaseAgent):
         """Decompose the task into subtasks and write them to the database."""
         logger.info(f"Manager decomposing task: {task.title}")
 
-        # Get available agents from config
-        from app.agents.base_agent import _agents_config
-        available_agents = list(_agents_config.get("agents", {}).keys())
+        # Get available agents from config (hot-reloaded)
+        all_agents = self._config_reloader.get_all_agents()
+        available_agents = list(all_agents.keys())
         agents_desc = "\n".join(
             f"- {name}: {cfg.get('role', '')} - {cfg.get('goal', '')}"
-            for name, cfg in _agents_config.get("agents", {}).items()
+            for name, cfg in all_agents.items()
             if name != "manager"
         )
 
-        # Build the decomposition prompt
-        prompt = MANAGER_DECOMPOSE_PROMPT.format(
-            project_description=task.description or task.title,
-            task_description=task.input_data.get("content", task.title)
-            if task.input_data
-            else task.title,
-            available_agents=agents_desc,
-        )
+        # Get system prompt from config (hot-reloaded)
+        system_prompt = self._get_system_prompt()
+
+        # Build the decomposition prompt (use safe replacement to avoid
+        # conflicts with JSON curly braces in the prompt template)
+        prompt = system_prompt
+        prompt = prompt.replace("{project_description}", task.description or task.title)
+        prompt = prompt.replace("{task_description}", (task.input_data.get("content", task.title) if task.input_data else task.title))
+        prompt = prompt.replace("{available_agents}", agents_desc)
+
+        # Get LLM params from config
+        params = self._get_llm_params()
 
         # Call LLM to decompose
         response = await call_llm(
             agent_role="manager",
             prompt=prompt,
-            temperature=0.3,
-            max_tokens=4096,
+            temperature=params.get("temperature", 0.3),
+            max_tokens=params.get("max_tokens", 4096),
         )
 
         # Parse the JSON response

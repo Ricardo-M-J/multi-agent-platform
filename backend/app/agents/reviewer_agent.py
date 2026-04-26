@@ -9,28 +9,6 @@ from app.llm.provider import call_llm
 
 logger = logging.getLogger(__name__)
 
-REVIEWER_PROMPT = """你是一位严格的审核员。请根据以下上下文，审核评估相关产出。
-
-{context}
-
-## 审核维度
-1. **准确性**: 内容是否准确，有无事实错误
-2. **完整性**: 是否覆盖了所有必要的内容
-3. **逻辑性**: 论述是否清晰、有条理
-4. **可读性**: 语言是否清晰易懂
-5. **实用性**: 对用户是否有实际价值
-
-## 输出要求
-请以 JSON 格式输出审核结果，包含以下字段：
-- overall_score: 总体评分（1-10）
-- dimensions: 各维度评分和评语（accuracy/completeness/logic/readability/usefulness）
-- strengths: 优点列表
-- issues: 问题列表（每项包含 description 和 severity）
-- suggestions: 改进建议列表
-- approved: 是否通过审核（布尔值）
-
-请只输出 JSON，不要输出其他内容。"""
-
 
 class ReviewerAgent(BaseDatabaseAgent):
     """Reviewer Agent that evaluates other agents' outputs."""
@@ -42,13 +20,18 @@ class ReviewerAgent(BaseDatabaseAgent):
         """Execute review task and return structured evaluation."""
         logger.info(f"Reviewer working on: {task.title}")
 
-        prompt = REVIEWER_PROMPT.format(context=context)
+        # Get system prompt from config (hot-reloaded)
+        system_prompt = self._get_system_prompt()
+        prompt = system_prompt.replace("{context}", context)
+
+        # Get LLM params from config
+        params = self._get_llm_params()
 
         response = await call_llm(
             agent_role="reviewer",
             prompt=prompt,
-            temperature=0.3,
-            max_tokens=4096,
+            temperature=params.get("temperature", 0.3),
+            max_tokens=params.get("max_tokens", 4096),
         )
 
         # Parse JSON response

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Activity, Home, Zap } from 'lucide-react';
+import { Activity, Home, Zap, Cpu } from 'lucide-react';
 
 /**
  * 顶部导航栏
@@ -25,6 +25,13 @@ export function Header() {
         >
           <Home size={16} />
           <span>项目列表</span>
+        </Link>
+        <Link
+          to="/agents"
+          className={`header-nav-item ${isActive('/agents') ? 'active' : ''}`}
+        >
+          <Cpu size={16} />
+          <span>Agent 管理</span>
         </Link>
         <Link
           to="/monitor"

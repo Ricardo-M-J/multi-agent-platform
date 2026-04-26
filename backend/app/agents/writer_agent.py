@@ -9,20 +9,6 @@ from app.llm.provider import call_llm
 
 logger = logging.getLogger(__name__)
 
-WRITER_PROMPT = """你是一位专业的写作者。请根据以下上下文和任务要求，撰写结构化文档。
-
-{context}
-
-## 输出要求
-请以 JSON 格式输出你的文档，包含以下字段：
-- title: 文档标题
-- document_type: 文档类型（report/article/summary/tutorial/review）
-- sections: 章节列表（每项包含 heading 和 content）
-- conclusion: 总结
-- word_count: 大致字数
-
-请只输出 JSON，不要输出其他内容。"""
-
 
 class WriterAgent(BaseDatabaseAgent):
     """Writer Agent that produces structured documents."""
@@ -34,13 +20,18 @@ class WriterAgent(BaseDatabaseAgent):
         """Execute writing task and return structured document."""
         logger.info(f"Writer working on: {task.title}")
 
-        prompt = WRITER_PROMPT.format(context=context)
+        # Get system prompt from config (hot-reloaded)
+        system_prompt = self._get_system_prompt()
+        prompt = system_prompt.replace("{context}", context)
+
+        # Get LLM params from config
+        params = self._get_llm_params()
 
         response = await call_llm(
             agent_role="writer",
             prompt=prompt,
-            temperature=0.7,
-            max_tokens=8192,
+            temperature=params.get("temperature", 0.7),
+            max_tokens=params.get("max_tokens", 8192),
         )
 
         # Parse JSON response

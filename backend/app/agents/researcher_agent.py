@@ -9,20 +9,6 @@ from app.llm.provider import call_llm
 
 logger = logging.getLogger(__name__)
 
-RESEARCHER_PROMPT = """你是一位严谨的研究员。请根据以下上下文和任务要求，进行深入调研分析。
-
-{context}
-
-## 输出要求
-请以 JSON 格式输出你的研究结果，包含以下字段：
-- summary: 研究摘要（200字以内）
-- key_findings: 关键发现列表（每项包含 point 和 explanation）
-- data_sources: 数据来源列表
-- recommendations: 建议列表
-- gaps: 研究空白或需要进一步调查的领域
-
-请只输出 JSON，不要输出其他内容。"""
-
 
 class ResearcherAgent(BaseDatabaseAgent):
     """Researcher Agent that investigates topics and produces structured findings."""
@@ -34,13 +20,18 @@ class ResearcherAgent(BaseDatabaseAgent):
         """Execute research task and return structured findings."""
         logger.info(f"Researcher working on: {task.title}")
 
-        prompt = RESEARCHER_PROMPT.format(context=context)
+        # Get system prompt from config (hot-reloaded)
+        system_prompt = self._get_system_prompt()
+        prompt = system_prompt.replace("{context}", context)
+
+        # Get LLM params from config
+        params = self._get_llm_params()
 
         response = await call_llm(
             agent_role="researcher",
             prompt=prompt,
-            temperature=0.5,
-            max_tokens=4096,
+            temperature=params.get("temperature", 0.5),
+            max_tokens=params.get("max_tokens", 4096),
         )
 
         # Parse JSON response

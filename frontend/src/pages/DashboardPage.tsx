@@ -27,6 +27,8 @@ export function DashboardPage() {
     name: '',
     description: '',
   });
+  const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   // 加载项目列表
   const fetchProjects = useCallback(async () => {
@@ -48,6 +50,8 @@ export function DashboardPage() {
   // 创建项目
   const handleCreate = async () => {
     if (!newProject.name.trim()) return;
+    setError(null);
+    setIsCreating(true);
     try {
       const project = await createProject(newProject);
       setProjects((prev) => [project, ...prev]);
@@ -55,7 +59,10 @@ export function DashboardPage() {
       setNewProject({ name: '', description: '' });
       navigate(`/monitor/${project.id}`);
     } catch (err) {
-      console.error('创建项目失败:', err);
+      const msg = err instanceof Error ? err.message : '创建项目失败，请检查后端是否已启动';
+      setError(msg);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -228,6 +235,19 @@ export function DashboardPage() {
                   rows={3}
                 />
               </div>
+              {error && (
+                <div style={{
+                  color: '#ef4444',
+                  fontSize: '13px',
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  backgroundColor: 'rgba(239,68,68,0.1)',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                }}>
+                  ⚠️ {error}
+                </div>
+              )}
             </div>
             <div className="modal-footer">
               <button
@@ -239,9 +259,9 @@ export function DashboardPage() {
               <button
                 className="btn btn-primary"
                 onClick={handleCreate}
-                disabled={!newProject.name.trim()}
+                disabled={!newProject.name.trim() || isCreating}
               >
-                创建
+                {isCreating ? '创建中...' : '创建'}
               </button>
             </div>
           </div>

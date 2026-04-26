@@ -1,29 +1,24 @@
 import { create } from 'zustand';
-import type { EventLog, EventLevel, EventSource } from '../types';
+import type { EventLog } from '../types';
 
 interface EventState {
-  /** 事件日志列表 */
   events: EventLog[];
-  /** 最大保留事件数 */
   maxEvents: number;
-  /** 过滤条件 */
   filters: EventFilters;
-  /** 是否自动滚动到底部 */
   autoScroll: boolean;
 
-  // Actions
   addEvent: (event: EventLog) => void;
   clearEvents: () => void;
-  setFilterLevel: (level: EventLevel | null) => void;
-  setFilterSource: (source: EventSource | null) => void;
+  setFilterLevel: (level: string | null) => void;
+  setFilterSource: (source: string | null) => void;
   setFilterSearch: (search: string) => void;
   setAutoScroll: (autoScroll: boolean) => void;
   getFilteredEvents: () => EventLog[];
 }
 
 export interface EventFilters {
-  level: EventLevel | null;
-  source: EventSource | null;
+  level: string | null;
+  source: string | null;
   search: string;
 }
 
@@ -40,7 +35,6 @@ export const useEventStore = create<EventState>((set, get) => ({
   addEvent: (event) =>
     set((state) => {
       const newEvents = [...state.events, event];
-      // 限制最大事件数
       if (newEvents.length > state.maxEvents) {
         return { events: newEvents.slice(-state.maxEvents) };
       }
@@ -50,32 +44,23 @@ export const useEventStore = create<EventState>((set, get) => ({
   clearEvents: () => set({ events: [] }),
 
   setFilterLevel: (level) =>
-    set((state) => ({
-      filters: { ...state.filters, level },
-    })),
+    set((state) => ({ filters: { ...state.filters, level } })),
 
   setFilterSource: (source) =>
-    set((state) => ({
-      filters: { ...state.filters, source },
-    })),
+    set((state) => ({ filters: { ...state.filters, source } })),
 
   setFilterSearch: (search) =>
-    set((state) => ({
-      filters: { ...state.filters, search },
-    })),
+    set((state) => ({ filters: { ...state.filters, search } })),
 
   setAutoScroll: (autoScroll) => set({ autoScroll }),
 
   getFilteredEvents: () => {
     const { events, filters } = get();
     return events.filter((event) => {
-      if (filters.level && event.level !== filters.level) return false;
-      if (filters.source && event.source !== filters.source) return false;
-      if (
-        filters.search &&
-        !event.message.toLowerCase().includes(filters.search.toLowerCase())
-      )
-        return false;
+      if (filters.level && event.event_level !== filters.level) return false;
+      if (filters.source && (event.agent_name || '') !== filters.source) return false;
+      const text = (event.content || event.message || '').toLowerCase();
+      if (filters.search && !text.includes(filters.search.toLowerCase())) return false;
       return true;
     });
   },

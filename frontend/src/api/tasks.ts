@@ -17,7 +17,7 @@ export async function getTask(projectId: string, taskId: string): Promise<Task> 
 /** 获取项目所有任务 */
 export async function getTasks(projectId: string): Promise<Task[]> {
   const response = await apiClient.get<Task[]>(`/projects/${projectId}/tasks`);
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 }
 
 /** 审核任务（通过/拒绝/修改/重试） */
@@ -54,7 +54,7 @@ export async function getTaskArtifacts(
   const response = await apiClient.get<Artifact[]>(
     `/projects/${projectId}/tasks/${taskId}/artifacts`
   );
-  return response.data;
+  return Array.isArray(response.data) ? response.data : [];
 }
 
 /** 获取产出物内容 */

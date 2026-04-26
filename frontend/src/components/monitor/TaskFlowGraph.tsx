@@ -148,7 +148,7 @@ export function TaskFlowGraph({
   // 构建 React Flow 边（依赖关系）
   const edges: Edge[] = useMemo(() => {
     return tasks.flatMap((task) =>
-      task.dependencies.map((depId) => ({
+      (task.dependencies ?? []).map((depId) => ({
         id: `${depId}-${task.id}`,
         source: depId,
         target: task.id,

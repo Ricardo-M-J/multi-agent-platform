@@ -30,7 +30,7 @@ class ResearcherAgent(BaseDatabaseAgent):
     def __init__(self, db_session_factory) -> None:
         super().__init__("researcher", db_session_factory)
 
-    async def execute(self, task: Task, context: str) -> dict:
+    async def execute(self, task: Task, context: str, session) -> dict:
         """Execute research task and return structured findings."""
         logger.info(f"Researcher working on: {task.title}")
 

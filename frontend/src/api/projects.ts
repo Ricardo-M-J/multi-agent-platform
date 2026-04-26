@@ -3,16 +3,12 @@ import type {
   Project,
   CreateProjectRequest,
   UpdateProjectRequest,
-  PaginatedResponse,
-  PaginationParams,
 } from '../types';
 
 /** 获取项目列表 */
-export async function getProjects(
-  params?: PaginationParams
-): Promise<PaginatedResponse<Project>> {
-  const response = await apiClient.get<PaginatedResponse<Project>>('/projects', { params });
-  return response.data;
+export async function getProjects(): Promise<Project[]> {
+  const response = await apiClient.get<Project[]>('/projects');
+  return Array.isArray(response.data) ? response.data : [];
 }
 
 /** 获取单个项目详情 */
@@ -43,18 +39,22 @@ export async function deleteProject(projectId: string): Promise<void> {
 
 /** 启动项目 */
 export async function startProject(projectId: string): Promise<Project> {
-  const response = await apiClient.post<Project>(`/projects/${projectId}/start`);
+  const response = await apiClient.post<Project>(`/projects/${projectId}/submit-task`, {
+    title: '开始执行',
+  });
   return response.data;
 }
 
 /** 暂停项目 */
 export async function pauseProject(projectId: string): Promise<Project> {
-  const response = await apiClient.post<Project>(`/projects/${projectId}/pause`);
+  const response = await apiClient.patch<Project>(`/projects/${projectId}`, {
+    status: 'paused',
+  });
   return response.data;
 }
 
 /** 获取项目的 SSE 事件流 URL */
 export function getProjectSSEUrl(projectId: string): string {
-  const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-  return `${base}/projects/${projectId}/events`;
+  const base = import.meta.env.VITE_API_BASE_URL || '';
+  return `${base}/api/projects/${projectId}/stream`;
 }

@@ -32,8 +32,8 @@ export function DashboardPage() {
   const fetchProjects = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getProjects({ page: 1, page_size: 50 });
-      setProjects(data.items);
+      const data = await getProjects();
+      setProjects(data);
     } catch (err) {
       console.error('加载项目列表失败:', err);
     } finally {
@@ -173,8 +173,8 @@ export function DashboardPage() {
                   </span>
                 </div>
                 <div className="project-meta">
-                  <span>{project.tasks.length} 个任务</span>
-                  <span>{project.agents.length} 个智能体</span>
+                  <span>{project.tasks?.length ?? 0} 个任务</span>
+                  <span>{project.agents?.length ?? 0} 个智能体</span>
                 </div>
               </div>
               <button

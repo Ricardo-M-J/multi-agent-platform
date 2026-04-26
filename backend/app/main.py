@@ -76,22 +76,23 @@ async def health_check():
 @app.post("/api/projects/{project_id}/submit-task")
 async def submit_task(
     project_id: str,
-    title: str,
-    description: str = "",
-    input_data: dict | None = None,
+    body: dict = None,
 ):
     """Submit a task to the multi-agent system for a project.
 
     The task will be assigned to the Manager Agent for decomposition
     into subtasks, which will then be executed by specialized agents.
+
+    Body JSON: { "title": "...", "description": "...", "input_data": {...} }
     """
     from app.engine.orchestrator import submit_user_task
 
+    body = body or {}
     result = await submit_user_task(
         project_id=project_id,
-        title=title,
-        description=description,
-        input_data=input_data,
+        title=body.get("title", ""),
+        description=body.get("description", ""),
+        input_data=body.get("input_data"),
     )
     return result
 

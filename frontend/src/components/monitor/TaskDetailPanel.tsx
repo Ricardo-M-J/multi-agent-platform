@@ -45,11 +45,11 @@ export function TaskDetailPanel({ task }: TaskDetailPanelProps) {
           )}
         </div>
 
-        {task.dependencies.length > 0 && (
+        {(task.dependencies?.length ?? 0) > 0 && (
           <div className="detail-section">
             <h4 className="section-label">依赖任务</h4>
             <div className="dependency-list">
-              {task.dependencies.map((depId) => (
+              {(task.dependencies ?? []).map((depId) => (
                 <span key={depId} className="dependency-tag">
                   {depId.slice(0, 8)}...
                 </span>

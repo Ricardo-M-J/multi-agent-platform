@@ -147,7 +147,7 @@ class BaseDatabaseAgent(ABC):
             )
 
             # Execute the task (subclass implements this)
-            result = await self.execute(task, context)
+            result = await self.execute(task, context, session)
 
             # Write result back to database
             if isinstance(result, str):
@@ -224,12 +224,13 @@ class BaseDatabaseAgent(ABC):
             )
 
     @abstractmethod
-    async def execute(self, task: Task, context: str) -> str | dict:
+    async def execute(self, task: Task, context: str, session: AsyncSession) -> str | dict:
         """Execute the task. Must be implemented by subclasses.
 
         Args:
             task: The task to execute.
             context: The assembled execution context.
+            session: The database session (for writing subtasks etc.).
 
         Returns:
             The task result as a string or structured dict.

@@ -1,15 +1,45 @@
-"""SQLAlchemy async database setup."""
+"""SQLAlchemy async database setup with SQLite + PostgreSQL support."""
 
+import logging
+
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.config.settings import settings
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=settings.log_level == "debug",
-    pool_size=10,
-    max_overflow=20,
-)
+logger = logging.getLogger(__name__)
+
+_is_sqlite = settings.database_url.startswith("sqlite")
+
+if _is_sqlite:
+    # NullPool: create a new connection each time, no pooling
+    # This avoids SQLite locking issues with concurrent access
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"check_same_thread": False},
+        poolclass=NullPool,
+        echo=settings.log_level == "debug",
+    )
+else:
+    engine = create_async_engine(
+        settings.database_url,
+        pool_size=10,
+        max_overflow=20,
+        echo=settings.log_level == "debug",
+    )
+
+# Set SQLite pragmas for better performance
+if _is_sqlite:
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=10000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
+
 
 async_session_factory = async_sessionmaker(
     engine,

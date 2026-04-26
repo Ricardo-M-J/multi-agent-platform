@@ -30,7 +30,7 @@ class WriterAgent(BaseDatabaseAgent):
     def __init__(self, db_session_factory) -> None:
         super().__init__("writer", db_session_factory)
 
-    async def execute(self, task: Task, context: str) -> dict:
+    async def execute(self, task: Task, context: str, session) -> dict:
         """Execute writing task and return structured document."""
         logger.info(f"Writer working on: {task.title}")
 

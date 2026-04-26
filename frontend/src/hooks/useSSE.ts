@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import type { SSEEvent, SSEEventType } from '../types';
+import type { SSEEvent } from '../types';
 
 type SSEHandler = (event: SSEEvent) => void;
 
@@ -24,79 +24,58 @@ interface UseSSEReturn {
 /**
  * SSE 事件流 Hook
  * 用于订阅项目实时事件
+ * 后端使用 sse-starlette，事件通过 data: JSON 格式发送
  */
 export function useSSE(
-  handlers: Record<SSEEventType, SSEHandler> | ((event: SSEEvent) => void),
+  handler: SSEHandler,
   options: UseSSEOptions
 ): UseSSEReturn {
   const { projectId, enabled = true, url } = options;
   const eventSourceRef = useRef<EventSource | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
-  const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
 
   const connect = useCallback(() => {
-    // 先关闭已有连接
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
 
-    const sseUrl =
-      url ||
-      `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/projects/${projectId}/events`;
+    // Use relative URL so Vite proxy handles it
+    const sseUrl = url || `/api/projects/${projectId}/stream`;
 
-    const eventSource = new EventSource(sseUrl);
-    eventSourceRef.current = eventSource;
+    try {
+      const eventSource = new EventSource(sseUrl);
+      eventSourceRef.current = eventSource;
 
-    eventSource.onopen = () => {
-      setIsConnected(true);
-      setLastError(null);
-      console.log('[SSE] 已连接:', sseUrl);
-    };
+      eventSource.onopen = () => {
+        setIsConnected(true);
+        setLastError(null);
+      };
 
-    eventSource.onerror = () => {
-      setIsConnected(false);
-      setLastError('SSE 连接中断');
-      console.error('[SSE] 连接错误');
-    };
+      eventSource.onerror = () => {
+        setIsConnected(false);
+        setLastError('SSE 连接中断');
+      };
 
-    // 监听所有自定义事件类型
-    const eventTypes: SSEEventType[] = [
-      'task_started',
-      'task_completed',
-      'task_failed',
-      'task_output',
-      'task_waiting_review',
-      'agent_status_changed',
-      'artifact_created',
-      'artifact_updated',
-      'event_log',
-      'project_status_changed',
-      'error',
-    ];
-
-    eventTypes.forEach((eventType) => {
-      eventSource.addEventListener(eventType, (e: MessageEvent) => {
+      // sse-starlette sends events as unnamed `message` events with JSON data
+      eventSource.onmessage = (e: MessageEvent) => {
         try {
           const data: SSEEvent = JSON.parse(e.data);
-          const currentHandlers = handlersRef.current;
-
-          if (typeof currentHandlers === 'function') {
-            currentHandlers(data);
-          } else if (currentHandlers[eventType]) {
-            currentHandlers[eventType](data);
-          }
+          handlerRef.current(data);
         } catch (err) {
-          console.error(`[SSE] 解析 ${eventType} 事件失败:`, err);
+          console.error('[SSE] 解析事件失败:', err);
         }
-      });
-    });
+      };
+    } catch (err) {
+      console.error('[SSE] 创建连接失败:', err);
+      setLastError('SSE 连接失败');
+    }
   }, [projectId, url]);
 
   useEffect(() => {
     if (!enabled || !projectId) return;
-
     connect();
 
     return () => {

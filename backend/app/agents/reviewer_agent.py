@@ -38,7 +38,7 @@ class ReviewerAgent(BaseDatabaseAgent):
     def __init__(self, db_session_factory) -> None:
         super().__init__("reviewer", db_session_factory)
 
-    async def execute(self, task: Task, context: str) -> dict:
+    async def execute(self, task: Task, context: str, session) -> dict:
         """Execute review task and return structured evaluation."""
         logger.info(f"Reviewer working on: {task.title}")
 

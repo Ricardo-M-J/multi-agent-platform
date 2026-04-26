@@ -7,13 +7,16 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     model_config = SettingsConfigDict(
-        env_file=Path(__file__).resolve().parent.parent / ".env",
+        env_file=Path(__file__).resolve().parent.parent.parent / ".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
 
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/multi_agent"
+    # Supports both PostgreSQL and SQLite:
+    #   PostgreSQL: postgresql+asyncpg://user:pass@host:5432/db
+    #   SQLite:     sqlite+aiosqlite:///./data/multi_agent.db
+    database_url: str = "sqlite+aiosqlite:///./data/multi_agent.db"
 
     # LLM API Keys
     moonshot_api_key: str = ""

@@ -120,11 +120,11 @@ export function ProjectMonitorPage() {
         <div className="grid-panel panel-dag">
           <div className="panel-header-bar">
             <h3>任务流程图</h3>
-            <span className="task-count">{project.tasks.length} 个任务</span>
+            <span className="task-count">{project.tasks?.length ?? 0} 个任务</span>
           </div>
           <div className="panel-content">
             <TaskFlowGraph
-              tasks={project.tasks}
+              tasks={project.tasks ?? []}
               selectedTaskId={selectedTaskId}
               onSelectTask={setSelectedTaskId}
             />
@@ -152,13 +152,13 @@ export function ProjectMonitorPage() {
         <div className="grid-panel panel-agents">
           <div className="panel-header-bar">
             <h3>智能体状态</h3>
-            <span className="agent-count">{project.agents.length} 个智能体</span>
+            <span className="agent-count">{project.agents?.length ?? 0} 个智能体</span>
           </div>
           <div className="panel-content agents-list">
-            {project.agents.length === 0 ? (
+            {(project.agents?.length ?? 0) === 0 ? (
               <div className="empty-mini">暂无智能体</div>
             ) : (
-              project.agents.map((agent) => (
+              (project.agents ?? []).map((agent) => (
                 <AgentStatusCard key={agent.id} agent={agent} />
               ))
             )}

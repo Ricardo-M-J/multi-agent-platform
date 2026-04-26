@@ -6,6 +6,7 @@ import {
   startProject,
   pauseProject,
 } from '../api/projects';
+import { getTasks } from '../api/tasks';
 import type { SSEEvent } from '../types';
 import { useSSE } from './useSSE';
 
@@ -21,71 +22,45 @@ export function useProject(projectId: string | undefined) {
     setProject,
     setLoading,
     setError,
-    updateTask,
-    updateAgent,
-    addArtifact,
-    updateArtifact: updateArtifactInStore,
   } = useProjectStore();
 
   const { addEvent } = useEventStore();
 
-  // SSE 事件处理器
+  // SSE 事件处理器 — 将后端事件转换为 store 更新
   const handleSSEEvent = useCallback(
     (event: SSEEvent) => {
-      switch (event.type) {
-        case 'task_started':
-        case 'task_completed':
-        case 'task_failed':
-        case 'task_waiting_review':
-          if (event.data && typeof event.data === 'object' && 'id' in event.data) {
-            updateTask(event.data as import('../types').Task);
-          }
-          break;
+      // 记录所有事件到事件日志
+      addEvent({
+        id: crypto.randomUUID(),
+        project_id: event.project_id,
+        agent_name: event.agent_name ?? undefined,
+        event_type: event.type,
+        event_level: event.type === 'error' ? 'error' : 'info',
+        content: event.content ?? undefined,
+        data: event.data,
+        created_at: new Date().toISOString(),
+      });
 
-        case 'task_output':
-          if (event.data && typeof event.data === 'object' && 'id' in event.data) {
-            const taskData = event.data as Partial<import('../types').Task> & { id: string };
-            updateTask({ id: taskData.id, streaming_output: taskData.streaming_output } as import('../types').Task);
+      // 更新 project store 中的任务状态
+      if (event.task_id && event.type === 'task_status_changed') {
+        setProject((prev) => {
+          if (!prev) return prev;
+          const tasks = prev.tasks ?? [];
+          const idx = tasks.findIndex((t) => t.id === event.task_id);
+          if (idx >= 0) {
+            const newTasks = [...tasks];
+            const newData = event.data || {};
+            newTasks[idx] = {
+              ...newTasks[idx],
+              status: (newData.new_status as string) || newTasks[idx].status,
+            };
+            return { ...prev, tasks: newTasks };
           }
-          break;
-
-        case 'agent_status_changed':
-          if (event.data && typeof event.data === 'object' && 'id' in event.data) {
-            updateAgent(event.data as import('../types').AgentState);
-          }
-          break;
-
-        case 'artifact_created':
-          if (event.data && typeof event.data === 'object' && 'id' in event.data) {
-            addArtifact(event.data as import('../types').Artifact);
-          }
-          break;
-
-        case 'artifact_updated':
-          if (event.data && typeof event.data === 'object' && 'id' in event.data) {
-            updateArtifactInStore(event.data as import('../types').Artifact);
-          }
-          break;
-
-        case 'event_log':
-          if (event.data && typeof event.data === 'object' && 'id' in event.data) {
-            addEvent(event.data as import('../types').EventLog);
-          }
-          break;
-
-        case 'project_status_changed':
-          if (event.data && typeof event.data === 'object' && 'status' in event.data) {
-            if (project) {
-              setProject({ ...project, status: event.data.status as import('../types').ProjectStatus });
-            }
-          }
-          break;
-
-        default:
-          break;
+          return prev;
+        });
       }
     },
-    [updateTask, updateAgent, addArtifact, updateArtifactInStore, addEvent, project, setProject]
+    [addEvent, setProject]
   );
 
   // 订阅 SSE 事件
@@ -94,14 +69,22 @@ export function useProject(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
-  // 加载项目数据
+  // 加载项目数据（聚合 tasks 和 agents）
   const fetchProject = useCallback(async () => {
     if (!projectId) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await getProject(projectId);
-      setProject(data);
+      const [projectData, tasksData] = await Promise.all([
+        getProject(projectId),
+        getTasks(projectId).catch(() => []), // tasks 失败不阻塞
+      ]);
+      setProject({
+        ...projectData,
+        tasks: tasksData,
+        agents: [], // agents 从独立 API 加载
+        artifacts: [],
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载项目失败');
     } finally {
@@ -115,7 +98,7 @@ export function useProject(projectId: string | undefined) {
     setLoading(true);
     try {
       const data = await startProject(projectId);
-      setProject(data);
+      setProject((prev) => prev ? { ...prev, ...data } : data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '启动项目失败');
     } finally {
@@ -129,7 +112,7 @@ export function useProject(projectId: string | undefined) {
     setLoading(true);
     try {
       const data = await pauseProject(projectId);
-      setProject(data);
+      setProject((prev) => prev ? { ...prev, ...data } : data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '暂停项目失败');
     } finally {

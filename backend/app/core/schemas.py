@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 # ─── Project Schemas ───
@@ -72,11 +72,11 @@ class TaskResponse(BaseModel):
     completed_at: datetime | None
     requires_human_review: bool
     human_feedback: str | None
-    metadata_: dict = Field(default_factory=dict, alias="metadata")
+    metadata_: dict = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True, "populate_by_name": True}
+    model_config = {"from_attributes": True}
 
 
 # ─── Agent State Schemas ───
@@ -135,10 +135,10 @@ class EventLogResponse(BaseModel):
     event_type: str | None
     event_level: str
     content: str | None
-    metadata_: dict = Field(default_factory=dict, alias="metadata")
+    data: dict = Field(default_factory=dict)
     created_at: datetime
 
-    model_config = {"from_attributes": True, "populate_by_name": True}
+    model_config = {"from_attributes": True}
 
 
 # ─── WebSocket Schemas ───

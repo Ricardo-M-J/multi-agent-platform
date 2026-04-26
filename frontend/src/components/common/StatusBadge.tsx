@@ -1,7 +1,7 @@
 import type { TaskStatus, AgentStatus, ProjectStatus } from '../../types';
 
 interface StatusBadgeProps {
-  status: TaskStatus | AgentStatus | ProjectStatus;
+  status: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -15,6 +15,9 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
 
   // 任务状态
   pending: { label: '等待中', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' },
+  claimed: { label: '已认领', color: '#a78bfa', bgColor: 'rgba(167,139,250,0.15)' },
+  in_progress: { label: '执行中', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
+  review: { label: '待审核', color: '#f59e0b', bgColor: 'rgba(245,158,11,0.15)' },
   waiting_review: { label: '待审核', color: '#f59e0b', bgColor: 'rgba(245,158,11,0.15)' },
   approved: { label: '已通过', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
   rejected: { label: '已拒绝', color: '#ef4444', bgColor: 'rgba(239,68,68,0.15)' },
@@ -22,6 +25,9 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
 
   // 智能体状态
   idle: { label: '空闲', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' },
+  thinking: { label: '思考中', color: '#a78bfa', bgColor: 'rgba(167,139,250,0.15)' },
+  executing: { label: '执行中', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
+  waiting: { label: '等待中', color: '#f59e0b', bgColor: 'rgba(245,158,11,0.15)' },
   busy: { label: '忙碌', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
   error: { label: '错误', color: '#ef4444', bgColor: 'rgba(239,68,68,0.15)' },
   offline: { label: '离线', color: '#6b7280', bgColor: 'rgba(107,114,128,0.15)' },

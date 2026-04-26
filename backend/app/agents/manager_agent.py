@@ -57,7 +57,7 @@ class ManagerAgent(BaseDatabaseAgent):
     def __init__(self, db_session_factory) -> None:
         super().__init__("manager", db_session_factory)
 
-    async def execute(self, task: Task, context: str) -> dict:
+    async def execute(self, task: Task, context: str, session) -> dict:
         """Decompose the task into subtasks and write them to the database."""
         logger.info(f"Manager decomposing task: {task.title}")
 
@@ -106,37 +106,35 @@ class ManagerAgent(BaseDatabaseAgent):
                 "subtasks_created": 0,
             }
 
-        # Create subtasks in the database
+        # Create subtasks in the database (using the provided session)
         created_subtasks = []
-        async with self._db_factory() as session:
-            for i, subtask_def in enumerate(subtasks):
-                if not isinstance(subtask_def, dict):
-                    continue
+        for i, subtask_def in enumerate(subtasks):
+            if not isinstance(subtask_def, dict):
+                continue
 
-                # Resolve dependencies
-                depends_on = subtask_def.get("depends_on", [])
-                parent_id = None
-                if depends_on and i > 0:
-                    # For now, all subtasks are children of the original task
-                    parent_id = task.id
+            # Resolve dependencies
+            depends_on = subtask_def.get("depends_on", [])
+            parent_id = None
+            if depends_on and i > 0:
+                parent_id = task.id
 
-                subtask = Task(
-                    project_id=task.project_id,
-                    parent_task_id=parent_id,
-                    title=subtask_def.get("title", f"子任务 {i + 1}"),
-                    description=subtask_def.get("description", ""),
-                    assigned_agent=subtask_def.get("assigned_agent"),
-                    priority=subtask_def.get("priority", 0),
-                    input_data=task.input_data,  # Pass parent's input data
-                    requires_human_review=subtask_def.get(
-                        "requires_human_review", False
-                    ),
-                    status="claimed",  # Auto-claim so workers can pick it up
-                )
-                session.add(subtask)
-                created_subtasks.append(subtask.title)
+            subtask = Task(
+                project_id=task.project_id,
+                parent_task_id=parent_id,
+                title=subtask_def.get("title", f"子任务 {i + 1}"),
+                description=subtask_def.get("description", ""),
+                assigned_agent=subtask_def.get("assigned_agent"),
+                priority=subtask_def.get("priority", 0),
+                input_data=task.input_data,
+                requires_human_review=subtask_def.get(
+                    "requires_human_review", False
+                ),
+                status="claimed",
+            )
+            session.add(subtask)
+            created_subtasks.append(subtask.title)
 
-            await session.flush()
+        await session.flush()
 
         logger.info(
             f"Manager created {len(created_subtasks)} subtasks: {created_subtasks}"

@@ -29,10 +29,10 @@ models:
 # Default model routing per agent role
 routing:
   manager: "openai/moonshot-v1-128k"
-  researcher: "deepseek/deepseek-chat"
+  researcher: "openai/moonshot-v1-128k"
   writer: "openai/moonshot-v1-128k"
-  reviewer: "deepseek/deepseek-reasoner"
-  analyst: "deepseek/deepseek-chat"
+  reviewer: "openai/moonshot-v1-128k"
+  analyst: "openai/moonshot-v1-128k"
   teacher: "openai/moonshot-v1-128k"
 
 # Fallback chain: if primary model fails, try these in order

@@ -20,13 +20,16 @@ import { StatusBadge } from '../common/StatusBadge';
 // 任务节点颜色配置
 // ============================================================
 
-const nodeStatusColors: Record<TaskStatus, string> = {
+const nodeStatusColors: Record<string, string> = {
   pending: '#475569',
+  claimed: '#3b82f6',
   running: '#22c55e',
+  in_progress: '#22c55e',
   waiting_review: '#f59e0b',
-  approved: '#3b82f6',
+  review: '#f59e0b',
+  approved: '#22c55e',
   rejected: '#ef4444',
-  completed: '#3b82f6',
+  completed: '#22c55e',
   failed: '#ef4444',
   cancelled: '#6b7280',
 };
@@ -87,7 +90,7 @@ function TaskNode({ data }: NodeProps) {
         {task.title}
       </div>
 
-      {task.agent_id && (
+      {task.assigned_agent && (
         <div
           style={{
             fontSize: '11px',
@@ -105,7 +108,7 @@ function TaskNode({ data }: NodeProps) {
               backgroundColor: isRunning ? '#22c55e' : '#64748b',
             }}
           />
-          智能体: {task.agent_id.slice(0, 8)}
+          智能体: {task.assigned_agent}
         </div>
       )}
 

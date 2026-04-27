@@ -92,7 +92,11 @@ class ManagerAgent(BaseDatabaseAgent):
                 description=subtask_def.get("description", ""),
                 assigned_agent=subtask_def.get("assigned_agent"),
                 priority=subtask_def.get("priority", 0),
-                input_data=task.input_data,
+                input_data={
+                    "project_description": (task.input_data or {}).get("project_description", ""),
+                    "parent_task_title": task.title,
+                    "parent_task_description": task.description or "",
+                },
                 requires_human_review=subtask_def.get(
                     "requires_human_review", False
                 ),

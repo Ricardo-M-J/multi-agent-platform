@@ -73,15 +73,15 @@ export function DashboardPage() {
     try {
       await deleteProject(projectId);
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
-    } catch (err) {
-      console.error('删除项目失败:', err);
+    } catch {
+      // 删除失败时静默处理，避免控制台报错
     }
   };
 
   // 过滤项目
   const filteredProjects = projects.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (p.description || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // 统计

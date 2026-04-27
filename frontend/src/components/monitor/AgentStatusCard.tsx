@@ -7,8 +7,11 @@ interface AgentStatusCardProps {
 }
 
 export function AgentStatusCard({ agent }: AgentStatusCardProps) {
+  const isActive = ['thinking', 'executing', 'waiting'].includes(agent.status);
+  const cardClassName = `agent-status-card${isActive ? ' agent-active' : ''}`;
+
   return (
-    <div className="agent-status-card">
+    <div className={cardClassName}>
       <div className="agent-card-header">
         <div className="agent-avatar">
           {agent.status === 'busy' ? (

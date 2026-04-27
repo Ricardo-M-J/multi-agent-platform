@@ -5,7 +5,7 @@ interface StatusBadgeProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string }> = {
+const statusConfig: Record<string, { label: string; color: string; bgColor: string; pulse?: boolean }> = {
   // 项目状态
   created: { label: '已创建', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' },
   running: { label: '运行中', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
@@ -15,13 +15,16 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
 
   // 任务状态
   pending: { label: '等待中', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' },
-  claimed: { label: '已认领', color: '#a78bfa', bgColor: 'rgba(167,139,250,0.15)' },
-  in_progress: { label: '执行中', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
+  claimed: { label: '已认领', color: '#3b82f6', bgColor: 'rgba(59,130,246,0.15)' },
+  in_progress: { label: '执行中', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)', pulse: true },
+  running: { label: '执行中', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)', pulse: true },
   review: { label: '待审核', color: '#f59e0b', bgColor: 'rgba(245,158,11,0.15)' },
   waiting_review: { label: '待审核', color: '#f59e0b', bgColor: 'rgba(245,158,11,0.15)' },
   approved: { label: '已通过', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
   rejected: { label: '已拒绝', color: '#ef4444', bgColor: 'rgba(239,68,68,0.15)' },
   cancelled: { label: '已取消', color: '#6b7280', bgColor: 'rgba(107,114,128,0.15)' },
+  completed: { label: '已完成', color: '#22c55e', bgColor: 'rgba(34,197,94,0.15)' },
+  failed: { label: '失败', color: '#ef4444', bgColor: 'rgba(239,68,68,0.15)' },
 
   // 智能体状态
   idle: { label: '空闲', color: '#94a3b8', bgColor: 'rgba(148,163,184,0.15)' },
@@ -55,7 +58,7 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
         color: config.color,
         backgroundColor: config.bgColor,
         fontWeight: 500,
-        whiteSpace: 'nowrap',
+        whiteSpace: nowrap,
         ...sizeStyles[size],
       }}
     >
@@ -66,6 +69,7 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
           borderRadius: '50%',
           backgroundColor: config.color,
           flexShrink: 0,
+          animation: config.pulse ? 'status-pulse 1.5s ease-in-out infinite' : undefined,
         }}
       />
       {config.label}

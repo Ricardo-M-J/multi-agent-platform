@@ -610,11 +610,11 @@ body {
   font-weight: 600;
 }
 
-/* Monitor Grid Layout */
+/* Monitor Grid Layout - 优化：任务面板 >=50%，详情面板 >=30% */
 .monitor-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 320px;
-  grid-template-rows: 1fr 220px;
+  grid-template-columns: minmax(50%, 3fr) minmax(30%, 2fr);
+  grid-template-rows: auto 1fr minmax(250px, 280px);
   gap: 12px;
   flex: 1;
   min-height: 0;
@@ -664,10 +664,10 @@ body {
   border-radius: 10px;
 }
 
-/* Grid Panel Positions */
+/* Grid Panel Positions - 优化布局：Agent 水平排列在上方 */
 .panel-dag {
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 2;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -675,17 +675,19 @@ body {
 
 .panel-detail {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 2;
 }
 
 .panel-agents {
-  grid-column: 3;
-  grid-row: 1 / 3;
+  grid-column: 1 / 3;
+  grid-row: 1;
+  overflow: hidden;
 }
 
 .panel-log {
   grid-column: 1 / 3;
-  grid-row: 2;
+  grid-row: 3;
+  min-height: 250px;
 }
 
 /* ============================================================
@@ -799,13 +801,16 @@ body {
 }
 
 /* ============================================================
-   Agent Status Card
+   Agent Status Card - 优化：水平排列，active 状态明显标识
    ============================================================ */
 .agents-list {
   padding: 12px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(200px, 1fr);
   gap: 10px;
+  overflow-x: auto;
+  align-items: start;
 }
 
 .agent-status-card {
@@ -814,10 +819,27 @@ body {
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);
   transition: var(--transition);
+  min-width: 0;
 }
 
 .agent-status-card:hover {
   border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Agent active 状态明显标识 */
+.agent-status-card.agent-active {
+  border-color: var(--accent-green);
+  background: rgba(34, 197, 94, 0.06);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.1);
+}
+
+.agent-status-card.agent-active .agent-name {
+  color: var(--accent-green);
+}
+
+.agent-status-card.agent-active .agent-avatar {
+  background: rgba(34, 197, 94, 0.15);
+  color: var(--accent-green);
 }
 
 .agent-card-header {
@@ -1223,6 +1245,17 @@ body {
   51%, 100% { opacity: 0; }
 }
 
+@keyframes status-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -1243,16 +1276,26 @@ body {
 }
 
 /* ============================================================
-   Responsive
+   Responsive - 优化：防止内容溢出
    ============================================================ */
 @media (max-width: 1200px) {
   .monitor-grid {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr 280px;
+    grid-template-columns: minmax(50%, 3fr) minmax(30%, 2fr);
+    grid-template-rows: auto 1fr minmax(250px, 280px);
   }
 
   .panel-agents {
     grid-column: 1 / 3;
+    grid-row: 1;
+  }
+
+  .panel-dag {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .panel-detail {
+    grid-column: 2;
     grid-row: 2;
   }
 
@@ -1269,13 +1312,23 @@ body {
 
   .monitor-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: 400px auto 300px 280px;
+    grid-template-rows: auto 400px auto 300px;
+    overflow-y: auto;
   }
 
-  .panel-dag { grid-column: 1; grid-row: 1; }
-  .panel-detail { grid-column: 1; grid-row: 2; }
-  .panel-agents { grid-column: 1; grid-row: 3; }
-  .panel-log { grid-column: 1; grid-row: 4; }
+  .panel-agents {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .panel-dag { grid-column: 1; grid-row: 2; }
+  .panel-detail { grid-column: 1; grid-row: 3; }
+  .panel-log { grid-column: 1; grid-row: 4; min-height: 250px; }
+
+  .agents-list {
+    grid-auto-flow: row;
+    grid-auto-columns: 1fr;
+  }
 
   .project-list {
     grid-template-columns: 1fr;
@@ -1437,41 +1490,45 @@ body {
 }
 
 /* ============================================================
-   Confirm Plan Button
+   Confirm Plan Button - 优化：更醒目的脉动效果和更大尺寸
    ============================================================ */
 .btn-confirm-plan {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: 8px;
+  padding: 8px 20px;
   background: var(--accent-green);
   color: #fff;
   border: none;
   border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
   white-space: nowrap;
   animation: confirm-pulse 2s ease-in-out infinite;
+  position: relative;
+  letter-spacing: 0.3px;
 }
 
 .btn-confirm-plan:hover:not(:disabled) {
   background: #16a34a;
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+  transform: translateY(-1px);
 }
 
 .btn-confirm-plan:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  animation: none;
 }
 
 @keyframes confirm-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.3);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
   }
 }
 

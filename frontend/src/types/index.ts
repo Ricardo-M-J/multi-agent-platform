@@ -9,6 +9,7 @@ export type ProjectStatus = 'created' | 'running' | 'paused' | 'completed' | 'fa
 export type TaskStatus =
   | 'pending'
   | 'claimed'
+  | 'running'
   | 'in_progress'
   | 'review'
   | 'completed'
@@ -65,6 +66,9 @@ export interface Task {
   // 前端扩展字段
   dependencies?: string[];
   streaming_output?: string;
+  agent_id?: string | null;
+  result?: string | null;
+  error?: string | null;
 }
 
 /** 智能体状态（与后端 AgentStateResponse 对齐） */
@@ -154,11 +158,15 @@ export type SSEEventType =
   | 'project_resumed'
   | 'error';
 
+/** WebSocket 消息类型 */
+export type WSMessageType = 'pause' | 'resume' | 'approve' | 'reject' | 'modify' | 'retry';
+
 /** WebSocket 消息 */
 export interface WSMessage {
-  type: string;
-  task_id?: string | null;
-  data: Record<string, unknown>;
+  type: WSMessageType;
+  project_id?: string;
+  task_id?: string;
+  data?: any;
 }
 
 // ============================================================

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useProject } from '../hooks/useProject';
 import { useProjectStore } from '../store/projectStore';
-import { reviewTask, confirmPlan, reviewTaskSimple } from '../api/tasks';
+import { reviewTask, reviewTaskSimple } from '../api/tasks';
 import { getPlan, updatePlanTask, deletePlanTask, addPlanTask, confirmPlan as confirmPlanFromPlans } from '../api/plans';
 import type { PlanTask } from '../api/plans';
 import { getArtifacts } from '../api/artifacts';
@@ -35,6 +35,13 @@ export function ProjectMonitorPage() {
   const navigate = useNavigate();
   const { project, isLoading, error, fetchProject, start, pause } = useProject(projectId);
   const { selectedTaskId, setSelectedTaskId } = useProjectStore();
+
+  // 组件卸载时清除项目数据，避免切换页面后残留旧数据
+  useEffect(() => {
+    return () => {
+      useProjectStore.getState().clearProject();
+    };
+  }, []);
 
   // 底部面板标签页状态
   const [bottomTab, setBottomTab] = useState<'events' | 'artifacts'>('events');
@@ -105,7 +112,7 @@ export function ProjectMonitorPage() {
         await fetchProject();
       } catch (err) {
         console.error('更新计划任务失败:', err);
-        alert('更新任务失败，请重试');
+        console.log('更新任务失败，请重试');
       }
     },
     [projectId, fetchProject]
@@ -123,7 +130,7 @@ export function ProjectMonitorPage() {
         await fetchProject();
       } catch (err) {
         console.error('删除计划任务失败:', err);
-        alert('删除任务失败，请重试');
+        console.log('删除任务失败，请重试');
       }
     },
     [projectId, fetchProject]
@@ -149,7 +156,7 @@ export function ProjectMonitorPage() {
       }
     } catch (err) {
       console.error('添加任务失败:', err);
-      alert('添加任务失败，请重试');
+      console.log('添加任务失败，请重试');
     }
   }, [projectId, handleEditPlanTask]);
 
@@ -161,10 +168,10 @@ export function ProjectMonitorPage() {
       const result = await confirmPlanFromPlans(projectId);
       setPlanTasks([]);
       await fetchProject();
-      alert(`计划已确认，共 ${result.count} 个任务已更新`);
+      console.log(`计划已确认，共 ${result.count} 个任务已更新`);
     } catch (err) {
       console.error('确认计划失败:', err);
-      alert('确认计划失败，请重试');
+      console.log('确认计划失败，请重试');
     } finally {
       setIsConfirmingPlan(false);
     }
@@ -216,23 +223,6 @@ export function ProjectMonitorPage() {
     [fetchProject]
   );
 
-  // 确认计划
-  const handleConfirmPlan = useCallback(async () => {
-    if (!projectId) return;
-    setIsConfirmingPlan(true);
-    try {
-      const result = await confirmPlan(projectId);
-      // 刷新项目数据
-      await fetchProject();
-      alert(`计划已确认，共 ${result.count} 个任务已更新`);
-    } catch (err) {
-      console.error('确认计划失败:', err);
-      alert('确认计划失败，请重试');
-    } finally {
-      setIsConfirmingPlan(false);
-    }
-  }, [projectId, fetchProject]);
-
   // 审核操作（通过/退回/修改要求）
   const handleReviewAction = useCallback(
     async (action: 'approve' | 'reject' | 'modify') => {
@@ -252,7 +242,7 @@ export function ProjectMonitorPage() {
         await fetchProject();
       } catch (err) {
         console.error('审核操作失败:', err);
-        alert('审核操作失败，请重试');
+        console.log('审核操作失败，请重试');
       } finally {
         setIsReviewing(false);
       }
@@ -323,7 +313,7 @@ export function ProjectMonitorPage() {
           {hasPendingTasks && (
             <button
               className="btn btn-confirm-plan"
-              onClick={handleConfirmPlan}
+              onClick={handleConfirmPlanFromEditor}
               disabled={isConfirmingPlan}
               title="确认计划"
             >

@@ -37,10 +37,10 @@ export function TaskDetailPanel({ task }: TaskDetailPanelProps) {
             <h4 className="section-label">状态</h4>
             <StatusBadge status={task.status} />
           </div>
-          {task.agent_id && (
+          {task.assigned_agent && (
             <div className="detail-item">
               <h4 className="section-label">执行智能体</h4>
-              <span className="detail-value">{task.agent_id.slice(0, 12)}...</span>
+              <span className="detail-value">{task.assigned_agent}</span>
             </div>
           )}
         </div>

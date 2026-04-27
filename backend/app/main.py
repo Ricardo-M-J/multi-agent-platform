@@ -2,9 +2,12 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.api import projects, tasks, agents, sse, websocket, artifacts, agent_config, plans, events
 from app.core.database import engine
@@ -70,6 +73,19 @@ app.include_router(artifacts.router, prefix="/api/projects/{project_id}/artifact
 app.include_router(agent_config.router, prefix="/api/agents", tags=["agent-config"])
 app.include_router(plans.router, prefix="/api/projects/{project_id}/plan", tags=["plans"])
 app.include_router(events.router, prefix="/api/projects/{project_id}/events", tags=["events"])
+
+# ---- Serve frontend static files ----
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+if STATIC_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="frontend-assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve the SPA index.html for all non-API routes."""
+        index_file = STATIC_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+        return {"detail": "Frontend not built. Run: cd frontend && npm run build && cp -r dist ../backend/static"}
 
 
 @app.get("/api/health")

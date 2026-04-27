@@ -96,30 +96,35 @@ async def add_plan_task(
     db: AsyncSession = Depends(get_db),
 ):
     """Add a new task to the plan."""
-    # Find the parent task (the original top-level task)
-    result = await db.execute(
-        select(Task).where(
-            Task.project_id == project_id,
-            Task.parent_task_id.is_(None),
+    try:
+        # Find the parent task (the original top-level task)
+        from sqlalchemy import text
+        result = await db.execute(
+            text("SELECT id FROM tasks WHERE project_id = :pid AND parent_task_id IS NULL LIMIT 1"),
+            {"pid": str(project_id)}
         )
-    )
-    parent = result.scalar_one_or_none()
+        row = result.fetchone()
+        parent_id = str(row[0]) if row else None
 
-    task = Task(
-        project_id=project_id,
-        parent_task_id=parent.id if parent else None,
-        title=body.get("title", "新子任务"),
-        description=body.get("description", ""),
-        assigned_agent=body.get("assigned_agent"),
-        priority=body.get("priority", 5),
-        requires_human_review=body.get("requires_human_review", False),
-        status="pending",
-    )
-    db.add(task)
-    await db.commit()
-    await db.refresh(task)
+        task = Task(
+            project_id=project_id,
+            parent_task_id=parent_id,
+            title=body.get("title", "新子任务"),
+            description=body.get("description", ""),
+            assigned_agent=body.get("assigned_agent"),
+            priority=body.get("priority", 5),
+            requires_human_review=body.get("requires_human_review", False),
+            status="pending",
+        )
+        db.add(task)
+        await db.commit()
+        await db.refresh(task)
 
-    return {"message": "Task added", "task_id": str(task.id)}
+        return {"message": "Task added", "task_id": str(task.id)}
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Failed to add plan task: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/confirm")

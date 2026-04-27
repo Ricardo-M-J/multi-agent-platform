@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import projects, tasks, agents, sse, websocket, artifacts, agent_config, plans
+from app.api import projects, tasks, agents, sse, websocket, artifacts, agent_config, plans, events
 from app.core.database import engine
 from app.core.events import event_bus
 from app.core.models import Base
@@ -69,6 +69,7 @@ app.include_router(websocket.router, prefix="/api/projects/{project_id}", tags=[
 app.include_router(artifacts.router, prefix="/api/projects/{project_id}/artifacts", tags=["artifacts"])
 app.include_router(agent_config.router, prefix="/api/agents", tags=["agent-config"])
 app.include_router(plans.router, prefix="/api/projects/{project_id}/plan", tags=["plans"])
+app.include_router(events.router, prefix="/api/projects/{project_id}/events", tags=["events"])
 
 
 @app.get("/api/health")

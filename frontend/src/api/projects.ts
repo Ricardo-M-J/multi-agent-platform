@@ -58,3 +58,18 @@ export function getProjectSSEUrl(projectId: string): string {
   const base = import.meta.env.VITE_API_BASE_URL || '';
   return `${base}/api/projects/${projectId}/stream`;
 }
+
+/** 获取项目历史事件日志 */
+export async function getProjectEvents(
+  projectId: string,
+  params?: { limit?: number; offset?: number; level?: string }
+): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.offset) query.set('offset', String(params.offset));
+  if (params?.level) query.set('level', params.level);
+  const qs = query.toString();
+  const url = `/projects/${projectId}/events${qs ? `?${qs}` : ''}`;
+  const response = await apiClient.get<any[]>(url);
+  return Array.isArray(response.data) ? response.data : [];
+}

@@ -3,6 +3,7 @@ import { useProjectStore } from '../store/projectStore';
 import { useEventStore } from '../store/eventStore';
 import {
   getProject,
+  getProjectEvents,
   startProject,
   pauseProject,
 } from '../api/projects';
@@ -71,18 +72,36 @@ export function useProject(projectId: string | undefined) {
   });
 
   // 加载项目数据（聚合 tasks 和 agents）
-  const fetchProject = useCallback(async () => {
+  const fetchProject = useCallback(async (retryCount = 0) => {
     if (!projectId) return;
     setLoading(true);
     setError(null);
     try {
-      const [projectData, tasksData, agentsData] = await Promise.all([
+      const [projectData, tasksData, agentsData, eventsData] = await Promise.all([
         getProject(projectId),
         getTasks(projectId).catch(() => []), // tasks 失败不阻塞
         getAgents().catch(() => []), // 加载全局 Agent 配置列表
+        getProjectEvents(projectId, { limit: 100 }).catch(() => []), // 加载历史事件
       ]);
       const safeAgents = Array.isArray(agentsData) ? agentsData : [];
       const safeTasks = Array.isArray(tasksData) ? tasksData : [];
+      const safeEvents = Array.isArray(eventsData) ? eventsData : [];
+
+      // 填充历史事件到 eventStore
+      if (safeEvents.length > 0) {
+        safeEvents.forEach((e) => {
+          addEvent({
+            id: e.id || crypto.randomUUID(),
+            project_id: e.project_id,
+            agent_name: e.agent_name ?? undefined,
+            event_type: e.event_type ?? e.type,
+            event_level: e.event_level ?? e.level ?? 'info',
+            content: e.content ?? undefined,
+            data: e.metadata_ ?? e.data,
+            created_at: e.created_at ?? new Date().toISOString(),
+          });
+        });
+      }
       setProject({
         ...projectData,
         tasks: safeTasks,
@@ -96,6 +115,10 @@ export function useProject(projectId: string | undefined) {
         })),
         artifacts: [],
       });
+      // 如果 tasks 为空但项目状态为 running，可能是时序问题，延迟重试
+      if (safeTasks.length === 0 && projectData.status === 'running' && retryCount < 3) {
+        setTimeout(() => fetchProject(retryCount + 1), 2000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载项目失败');
     } finally {

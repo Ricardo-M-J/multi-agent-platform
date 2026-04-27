@@ -79,17 +79,6 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 if STATIC_DIR.is_dir():
     app.mount("/assets", StaticFiles(directory=str(STATIC_DIR / "assets")), name="frontend-assets")
 
-    @app.get("/{full_path:path}")
-    async def serve_spa(full_path: str):
-        """Serve the SPA index.html for all non-API routes."""
-        # Don't intercept API routes
-        if full_path.startswith("api/"):
-            return {"detail": "Not Found"}
-        index_file = STATIC_DIR / "index.html"
-        if index_file.exists():
-            return FileResponse(str(index_file))
-        return {"detail": "Frontend not built. Run: cd frontend && npm run build && cp -r dist ../backend/static"}
-
 
 @app.get("/api/health")
 async def health_check():
@@ -126,3 +115,15 @@ async def engine_status():
     from app.engine.orchestrator import get_engine_status
 
     return await get_engine_status()
+
+
+# ---- SPA catch-all (must be LAST) ----
+if STATIC_DIR.is_dir():
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve the SPA index.html for all non-API routes."""
+        index_file = STATIC_DIR / "index.html"
+        if index_file.exists():
+            return FileResponse(str(index_file))
+        return {"detail": "Not Found"}

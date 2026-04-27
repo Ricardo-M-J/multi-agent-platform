@@ -43,7 +43,7 @@ export function AgentStatusCard({ agent }: AgentStatusCardProps) {
           </div>
         )}
 
-        {agent.capabilities.length > 0 && (
+        {(agent.capabilities?.length ?? 0) > 0 && (
           <div className="agent-capabilities">
             {agent.capabilities.map((cap) => (
               <span key={cap} className="capability-tag">

@@ -82,11 +82,8 @@ class ManagerAgent(BaseDatabaseAgent):
             if not isinstance(subtask_def, dict):
                 continue
 
-            # Resolve dependencies
-            depends_on = subtask_def.get("depends_on", [])
-            parent_id = None
-            if depends_on and i > 0:
-                parent_id = task.id
+            # Resolve dependencies — all subtasks should reference the parent
+            parent_id = task.id  # All subtasks are children of the original task
 
             subtask = Task(
                 project_id=task.project_id,

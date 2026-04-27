@@ -65,7 +65,6 @@ async def confirm_plan(
         .where(
             Task.project_id == project_id,
             Task.status == "pending",
-            Task.parent_task_id.isnot(None),  # Only subtasks, not the parent
         )
         .values(status="claimed")
     )

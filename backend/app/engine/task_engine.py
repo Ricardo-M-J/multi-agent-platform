@@ -9,6 +9,8 @@ from app.agents.manager_agent import ManagerAgent
 from app.agents.researcher_agent import ResearcherAgent
 from app.agents.reviewer_agent import ReviewerAgent
 from app.agents.writer_agent import WriterAgent
+from app.agents.analyst_agent import AnalystAgent
+from app.agents.teacher_agent import TeacherAgent
 from app.config.settings import settings
 from app.core.database import async_session_factory
 from app.core.events import event_bus
@@ -48,6 +50,8 @@ class TaskEngine:
         self.register_agent(ResearcherAgent(async_session_factory))
         self.register_agent(WriterAgent(async_session_factory))
         self.register_agent(ReviewerAgent(async_session_factory))
+        self.register_agent(AnalystAgent(async_session_factory))
+        self.register_agent(TeacherAgent(async_session_factory))
 
         # Start agent worker loops
         for name, agent in self._agents.items():

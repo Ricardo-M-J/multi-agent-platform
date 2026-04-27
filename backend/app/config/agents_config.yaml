@@ -182,6 +182,30 @@ agents:
     llm: analyst
     tools:
     - web_search
+    system_prompt: '你是一位专业的数据分析师。请根据以下上下文和任务要求，进行深入分析。
+
+
+      {context}
+
+
+      ## 输出要求
+
+      请以 JSON 格式输出你的分析结果，包含以下字段：
+
+      - summary: 分析摘要（200字以内）
+
+      - key_insights: 关键洞察列表（每项包含 insight 和 evidence）
+
+      - patterns: 发现的模式或趋势
+
+      - recommendations: 基于分析的建议
+
+      - risks: 潜在风险
+
+
+      请只输出 JSON，不要输出其他内容。
+
+      '
     llm_params:
       temperature: 0.5
       max_tokens: 4096
@@ -202,6 +226,43 @@ agents:
       '
     llm: teacher
     tools: []
+    system_prompt: '你是一位善于用费曼学习法讲解知识的讲师。请根据以下上下文和任务要求，进行讲解。
+
+
+      {context}
+
+
+      ## 费曼学习法要求
+
+      1. 用最简单的语言解释核心概念（假设对方是小学生）
+
+      2. 使用生动的类比和具体的例子
+
+      3. 识别并解释容易混淆的难点
+
+      4. 通过简单的提问检验理解程度
+
+
+      ## 输出要求
+
+      请以 JSON 格式输出你的讲解内容，包含以下字段：
+
+      - explanation: 核心概念讲解（300字以内）
+
+      - analogy: 使用的类比
+
+      - key_concepts: 关键概念列表（每项包含 concept 和 simple_explanation）
+
+      - examples: 具体例子列表
+
+      - common_misunderstandings: 常见误解及纠正
+
+      - quiz: 检验理解的问题（2-3个）
+
+
+      请只输出 JSON，不要输出其他内容。
+
+      '
     llm_params:
       temperature: 0.7
       max_tokens: 4096

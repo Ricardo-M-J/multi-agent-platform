@@ -1,6 +1,21 @@
 import type { WSMessage, WSMessageType } from '../types';
 
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000/ws';
+// Auto-derive WebSocket URL from API base URL
+function getWsBaseUrl(): string {
+  const explicit = import.meta.env.VITE_WS_BASE_URL;
+  if (explicit) return explicit;
+
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api';
+  if (apiBase.startsWith('http')) {
+    // Convert http(s)://host/api -> ws(s)://host/ws
+    return apiBase.replace(/^http/, 'ws').replace(/\/api$/, '/ws');
+  }
+  // Relative path: use current page origin
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${window.location.host}/ws`;
+}
+
+const WS_BASE_URL = getWsBaseUrl();
 
 type MessageHandler = (message: WSMessage) => void;
 

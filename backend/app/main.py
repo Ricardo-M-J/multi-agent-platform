@@ -82,6 +82,9 @@ if STATIC_DIR.is_dir():
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         """Serve the SPA index.html for all non-API routes."""
+        # Don't intercept API routes
+        if full_path.startswith("api/"):
+            return {"detail": "Not Found"}
         index_file = STATIC_DIR / "index.html"
         if index_file.exists():
             return FileResponse(str(index_file))

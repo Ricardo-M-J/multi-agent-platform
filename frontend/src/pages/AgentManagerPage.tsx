@@ -99,7 +99,6 @@ export function AgentManagerPage() {
       }
     } catch (err) {
       console.error('保存失败:', err);
-      alert('保存失败，请重试');
     } finally {
       setSaving(false);
     }

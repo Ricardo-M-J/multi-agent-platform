@@ -1,4 +1,4 @@
-[build]
-builder = "DOCKERFILE"
-dockerfilePath = "backend/Dockerfile"
-dockerContext = "backend"
+# Railway 部署配置
+# 在 Railway Dashboard -> Settings 中设置:
+#   Root Directory = backend
+#   或设置环境变量 RAILWAY_DOCKERFILE_PATH = backend/Dockerfile

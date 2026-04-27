@@ -42,8 +42,9 @@ export function useSSE(
       eventSourceRef.current.close();
     }
 
-    // Use relative URL so Vite proxy handles it
-    const sseUrl = url || `/api/projects/${projectId}/stream`;
+    // Build SSE URL respecting VITE_API_BASE_URL
+    const apiBase = import.meta.env.VITE_API_BASE_URL || '';
+    const sseUrl = url || `${apiBase}/api/projects/${projectId}/stream`;
 
     try {
       const eventSource = new EventSource(sseUrl);

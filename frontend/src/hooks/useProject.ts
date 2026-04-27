@@ -7,6 +7,7 @@ import {
   pauseProject,
 } from '../api/projects';
 import { getTasks } from '../api/tasks';
+import { getAgents } from '../api/agents';
 import type { SSEEvent } from '../types';
 import { useSSE } from './useSSE';
 
@@ -75,14 +76,22 @@ export function useProject(projectId: string | undefined) {
     setLoading(true);
     setError(null);
     try {
-      const [projectData, tasksData] = await Promise.all([
+      const [projectData, tasksData, agentsData] = await Promise.all([
         getProject(projectId),
         getTasks(projectId).catch(() => []), // tasks 失败不阻塞
+        getAgents().catch(() => []), // 加载全局 Agent 配置列表
       ]);
       setProject({
         ...projectData,
         tasks: tasksData,
-        agents: [], // agents 从独立 API 加载
+        agents: agentsData.map((a) => ({
+          id: a.name,
+          agent_name: a.name,
+          name: a.name,
+          role: a.role,
+          status: 'idle' as const,
+          current_task: null,
+        })),
         artifacts: [],
       });
     } catch (err) {

@@ -44,7 +44,9 @@ export function useSSE(
 
     // Build SSE URL respecting VITE_API_BASE_URL
     const apiBase = import.meta.env.VITE_API_BASE_URL || '';
-    const sseUrl = url || `${apiBase}/api/projects/${projectId}/stream`;
+    // apiBase 可能已包含 /api 后缀，避免重复
+    const prefix = apiBase.endsWith('/api') ? apiBase : `${apiBase}/api`;
+    const sseUrl = url || `${prefix}/projects/${projectId}/stream`;
 
     try {
       const eventSource = new EventSource(sseUrl);

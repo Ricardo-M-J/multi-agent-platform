@@ -60,14 +60,24 @@ export function ProjectMonitorPage() {
   // 是否有 pending 状态的子任务
   const hasPendingTasks = (project?.tasks ?? []).some((t) => t.status === 'pending');
 
-  // 当有 pending 任务时加载计划
+  // 当有 pending 任务时加载计划；也尝试加载计划来判断是否处于计划编辑模式
   useEffect(() => {
-    if (projectId && hasPendingTasks) {
+    if (projectId) {
       getPlan(projectId)
-        .then(setPlanTasks)
-        .catch((err) => console.error('加载计划失败:', err));
-    } else {
-      setPlanTasks([]);
+        .then((data) => {
+          // plan API 返回非空数据说明处于计划编辑模式
+          if (data.length > 0) {
+            setPlanTasks(data);
+          } else if (!hasPendingTasks) {
+            setPlanTasks([]);
+          }
+        })
+        .catch(() => {
+          // plan API 失败时，根据 hasPendingTasks 决定
+          if (!hasPendingTasks) {
+            setPlanTasks([]);
+          }
+        });
     }
   }, [projectId, hasPendingTasks]);
 

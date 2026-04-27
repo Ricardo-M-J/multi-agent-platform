@@ -81,10 +81,12 @@ export function useProject(projectId: string | undefined) {
         getTasks(projectId).catch(() => []), // tasks 失败不阻塞
         getAgents().catch(() => []), // 加载全局 Agent 配置列表
       ]);
+      const safeAgents = Array.isArray(agentsData) ? agentsData : [];
+      const safeTasks = Array.isArray(tasksData) ? tasksData : [];
       setProject({
         ...projectData,
-        tasks: tasksData,
-        agents: agentsData.map((a) => ({
+        tasks: safeTasks,
+        agents: safeAgents.map((a) => ({
           id: a.name,
           agent_name: a.name,
           name: a.name,

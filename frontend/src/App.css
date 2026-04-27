@@ -668,6 +668,9 @@ body {
 .panel-dag {
   grid-column: 1;
   grid-row: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-detail {
@@ -1777,7 +1780,8 @@ body {
 .plan-editor {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   padding: 12px;
   gap: 12px;
 }
@@ -1786,12 +1790,12 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 6px 12px;
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: var(--radius-md);
   color: var(--accent-yellow);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   flex-shrink: 0;
 }
@@ -1809,7 +1813,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 6px 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-md);

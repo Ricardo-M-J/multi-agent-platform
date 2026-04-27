@@ -128,8 +128,11 @@ export function AgentManagerPage() {
           agents.map((agent) => (
             <div
               key={agent.name}
+              role="button"
+              tabIndex={0}
               className={`agent-card ${selectedAgent?.name === agent.name ? 'active' : ''}`}
               onClick={() => handleSelectAgent(agent)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSelectAgent(agent)}
             >
               <div className="agent-card-header">
                 <div className="agent-avatar">
